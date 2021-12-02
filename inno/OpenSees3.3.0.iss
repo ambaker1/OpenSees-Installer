@@ -19,7 +19,7 @@ DisableWelcomePage=no
 DisableDirPage=no
 DefaultGroupName={#MyAppName}
 DisableProgramGroupPage=yes
-OutputBaseFilename=OpenSees-3.3.0-Setup
+OutputBaseFilename={#MyAppName}-{#MyAppVersion}-Setup
 OutputDir=../build
 Compression=lzma
 SolidCompression=yes
@@ -43,7 +43,7 @@ Name: envPath; Description: "Add to PATH variable"
 Type: filesandordirs; Name: "{app}\lib"
 
 [Code]
-// This code checks to see if Tcl is installed, and then gets the installation location.
+// This code checks to see if the correct version of Tcl is installed (ActiveTcl), and gets the location
 const
   ActiveTclKey = 'SOFTWARE\Wow6432Node\ActiveState\ActiveTcl';
 var
@@ -52,16 +52,32 @@ var
 function InitializeSetup(): Boolean;
 var
   ActiveTclVersion: string;
+  PackedVersion: Int64;
+  MajorVersion: Word;
+  MinorVersion: Word;
+  RevisionNumber: Word;
+  BuildNumber: Word;
 begin
   if RegQueryStringValue(HKLM,ActiveTclKey,'CurrentVersion',ActiveTclVersion) then
   begin
-    Result := True;
-    RegQueryStringValue(HKLM,ActiveTclKey + '\' + ActiveTclVersion,'',ActiveTclPath);
+    StrToVersion(ActiveTclVersion,PackedVersion);
+    UnpackVersionComponents(PackedVersion,MajorVersion,MinorVersion,RevisionNumber,BuildNumber);
+    // only compare patch level (don't worry about build number)
+    if (MajorVersion = 8) and (MinorVersion = 6) and (RevisionNumber = 10) then
+    begin
+      Result := True;
+      RegQueryStringValue(HKLM,ActiveTclKey + '\' + ActiveTclVersion,'',ActiveTclPath);
+    end
+    else
+    begin
+      Result := False;
+      MsgBox('Requires ActiveTcl 8.6.10 from activestate.com', mbError, MB_OK);
+    end;
   end
   else
   begin
     Result := False;
-    MsgBox('Please install Tcl from ActiveState.com', mbError, MB_OK);
+    MsgBox('Requires ActiveTcl 8.6.10 from activestate.com', mbError, MB_OK);
   end;
 end;
 
