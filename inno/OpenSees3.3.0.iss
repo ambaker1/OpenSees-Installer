@@ -24,6 +24,7 @@ OutputDir=../build
 Compression=lzma
 SolidCompression=yes
 WizardStyle=modern
+ChangesEnvironment=yes
 
 [Languages]
 Name: "english"; MessagesFile: "compiler:Default.isl"
@@ -32,13 +33,14 @@ Name: "english"; MessagesFile: "compiler:Default.isl"
 Source: "..\src\OpenSees3.3.0-x64.exe\bin\*"; DestDir: "{app}\bin"; Flags: ignoreversion recursesubdirs
 Source: "..\COPYRIGHT"; DestDir: "{app}"; Flags: ignoreversion recursesubdirs
 
-; This run command creates a link to the full Tcl library
+; This run command creates a folder junction to the full Tcl library
 [Run]
-Filename: "{cmd}"; Parameters: "/C mklink /D ""{app}\lib"" ""{code:GetActiveTclPath}\lib"""
+Filename: "{cmd}"; Parameters: "/C mklink /J ""{app}\lib"" ""{code:GetActiveTclPath}\lib"""
 
 [Tasks]
 Name: envPath; Description: "Add to PATH variable" 
 
+; This deletes the folder junction to the full Tcl library
 [UninstallDelete]
 Type: filesandordirs; Name: "{app}\lib"
 
@@ -90,7 +92,7 @@ end;
 // https://stackoverflow.com/a/46609047
 procedure CurStepChanged(CurStep: TSetupStep);
 begin
-    if (CurStep = ssPostInstall) and IsTaskSelected('envPath')
+    if (CurStep = ssPostInstall) and WizardIsTaskSelected('envPath')
     then EnvAddPath(ExpandConstant('{app}') +'\bin');
 end;
 
