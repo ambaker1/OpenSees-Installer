@@ -12,8 +12,8 @@
 AppId={{0967D55B-E2ED-417A-8549-2EF4379B1685}
 AppName={#MyAppName}
 AppVersion={#MyAppVersion}
-;AppVerName={#MyAppName} {#MyAppVersion}
 AppPublisher={#MyAppPublisher}
+AppCopyright=Copyright @ 1999-2020 The Regents of the University of California (The Regents). All Rights Reserved.
 DefaultDirName={commonpf64}\OpenSees
 DisableWelcomePage=no
 DisableDirPage=no
@@ -21,6 +21,7 @@ DefaultGroupName={#MyAppName}
 DisableProgramGroupPage=yes
 OutputBaseFilename={#MyAppName}-{#MyAppVersion}-Setup
 OutputDir=../build
+LicenseFile=../COPYRIGHT
 Compression=lzma
 SolidCompression=yes
 WizardStyle=modern
@@ -73,13 +74,13 @@ begin
     else
     begin
       Result := False;
-      MsgBox('Requires ActiveTcl 8.6.10 from activestate.com', mbError, MB_OK);
+      MsgBox('Requires ActiveTcl 8.6.10 from www.activestate.com', mbError, MB_OK);
     end;
   end
   else
   begin
     Result := False;
-    MsgBox('Requires ActiveTcl 8.6.10 from activestate.com', mbError, MB_OK);
+    MsgBox('Requires ActiveTcl 8.6.10 from www.activestate.com', mbError, MB_OK);
   end;
 end;
 
