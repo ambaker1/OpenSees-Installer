@@ -14,6 +14,7 @@ AppName={#MyAppName}
 AppVersion={#MyAppVersion}
 AppPublisher={#MyAppPublisher}
 AppCopyright=Copyright @ 1999-2020 The Regents of the University of California (The Regents). All Rights Reserved.
+VersionInfoVersion={#MyAppVersion}.0
 DefaultDirName={commonpf64}\OpenSees
 DisableWelcomePage=no
 DisableDirPage=no
