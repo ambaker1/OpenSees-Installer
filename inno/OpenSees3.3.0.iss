@@ -15,7 +15,7 @@ AppVersion={#MyAppVersion}
 AppPublisher={#MyAppPublisher}
 AppCopyright=Copyright @ 1999-2020 The Regents of the University of California (The Regents). All Rights Reserved.
 VersionInfoVersion={#MyAppVersion}.0
-DefaultDirName={code:GetActiveTclPath}\{#MyAppName}-{#MyAppVersion}
+DefaultDirName={code:GetTclPath}\{#MyAppName}-{#MyAppVersion}
 DisableWelcomePage=no
 DisableDirPage=yes
 DefaultGroupName={#MyAppName}
@@ -56,53 +56,72 @@ Name: envPath; Description: "Add to PATH variable"
 [Code]
 // This code checks to see if the correct version of Tcl is installed (ActiveTcl), and gets the location
 const
-  ActiveTclKey = 'SOFTWARE\Wow6432Node\ActiveState\ActiveTcl';
+  ActiveTclRegKey = 'SOFTWARE\Wow6432Node\ActiveState\ActiveTcl';
+  ReqTclVersion = '8.6.10';
 var
-  ActiveTclPath: string;
+  TclPath: string;
 
 function InitializeSetup(): Boolean;
 var
-  ActiveTclVersion: string;
+  // Variables for getting version from registry
+  ActiveTclVersionArray: TArrayOfString;
+  ActiveTclVersion: String;
   PackedVersion: Int64;
   MajorVersion: Word;
   MinorVersion: Word;
   RevisionNumber: Word;
   BuildNumber: Word;
+  TclVersion: AnsiString;
+  // Variables for getting version from tclsh.exe 
+  TmpInFile: String;
+  TmpOutFile: String;
+  ExitCode: Integer;
+  i: Integer;
 begin
-  if RegQueryStringValue(HKLM,ActiveTclKey,'CurrentVersion',ActiveTclVersion) then
+  // initialize result
+  Result := False;
+  // Get list of all ActiveTcl versions, and find if one matches.
+  if RegGetSubkeyNames(HKLM,ActiveTclRegKey,ActiveTclVersionArray) then
   begin
-    StrToVersion(ActiveTclVersion,PackedVersion);
-    UnpackVersionComponents(PackedVersion,MajorVersion,MinorVersion,RevisionNumber,BuildNumber);
-    // only compare patch level (don't worry about build number)
-    if (MajorVersion = 8) and (MinorVersion = 6) and (RevisionNumber = 10) then
+    for i := 0 to GetArrayLength(ActiveTclVersionArray)-1 do 
     begin
-      // try to get Tcl path. If failed, exit.
-      if RegQueryStringValue(HKLM,ActiveTclKey + '\' + ActiveTclVersion,'',ActiveTclPath) then
+      ActiveTclVersion := ActiveTclVersionArray[i];
+      // unpack version number and compare patch level
+      StrToVersion(ActiveTclVersion,PackedVersion);
+      UnpackVersionComponents(PackedVersion,MajorVersion,MinorVersion,RevisionNumber,BuildNumber);
+      TclVersion := IntToStr(MajorVersion) + '.' + IntToStr(MinorVersion) + '.' + IntToStr(RevisionNumber);
+      // check to see if patch level matches
+      if (CompareStr(TclVersion,ReqTclVersion) = 0) then
       begin
-        Result := True;
-      end
-      else
-      begin
-        Result := False;
-        MsgBox('Failed to get Tcl path from registry', mbError, MB_OK);
+        Result := RegQueryStringValue(HKLM,ActiveTclRegKey + '\' + ActiveTclVersion,'',TclPath);
+        break;
       end;
-    end
-    else
-    begin
-      Result := False;
-      MsgBox('Requires ActiveTcl 8.6.10 from www.activestate.com', mbError, MB_OK);
     end;
-  end
-  else
+  end;
+  // either ActiveTcl is not installed or the required version is missing/corrupted. Go manual.
+  if (Result = False) and BrowseForFolder('Locate Tcl ' + ReqTclVersion + ' Installation', TclPath, False) then
   begin
-    Result := False;
-    MsgBox('Requires ActiveTcl 8.6.10 from www.activestate.com', mbError, MB_OK);
+    // verify directory by running "info patchlevel" in Tclsh
+    TmpInFile := ExpandConstant('{tmp}\TclVersion.tcl');
+    TmpOutFile := ExpandConstant('{tmp}\TclVersion.log');
+    SaveStringToFile(TmpInFile,'puts -nonewline [info patchlevel]',false);
+    Exec(ExpandConstant('{cmd}'),'/C ""' + TclPath + '\bin\tclsh.exe" "' + TmpInFile + '" > "' + TmpOutFile + '""', '', SW_HIDE, ewWaitUntilTerminated, ExitCode)
+    if (ExitCode = 0) and LoadStringFromFile(TmpOutFile, TclVersion) then
+    begin
+      // check to see if patch level matches
+      if (CompareStr(TclVersion,ReqTclVersion) = 0) then
+        Result := True
+      else MsgBox('Wrong Tcl version (' + TclVersion + '). Need Tcl ' + ReqTclVersion, mbError, MB_OK)
+    end
+    else MsgBox('Valid tclsh.exe not found in "' + TclPath + '\bin"', mbError, MB_OK);
+    DeleteFile(TmpInFile);
+    DeleteFile(TmpOutFile);
   end;
 end;
 
-function GetActiveTclPath(Param: string): string;
+function GetTclPath(Param: string): string;
 begin
-  Result:= ActiveTclPath;
+  Result:= TclPath;
 end;
 
 // Code for adding/removing from path by Wojciech Mleczek
