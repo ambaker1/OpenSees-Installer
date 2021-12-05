@@ -15,14 +15,14 @@ AppVersion={#MyAppVersion}
 AppPublisher={#MyAppPublisher}
 AppCopyright=Copyright @ 1999-2020 The Regents of the University of California (The Regents). All Rights Reserved.
 VersionInfoVersion={#MyAppVersion}.0
-DefaultDirName={commonpf64}\OpenSees
+DefaultDirName={code:GetActiveTclPath}\{#MyAppName}-{#MyAppVersion}
 DisableWelcomePage=no
-DisableDirPage=no
+DisableDirPage=yes
 DefaultGroupName={#MyAppName}
 DisableProgramGroupPage=yes
 OutputBaseFilename={#MyAppName}-{#MyAppVersion}-Setup
-OutputDir=../build
-LicenseFile=../COPYRIGHT
+OutputDir=..\build
+LicenseFile=..\COPYRIGHT.txt
 Compression=lzma
 SolidCompression=yes
 WizardStyle=modern
@@ -31,20 +31,27 @@ ChangesEnvironment=yes
 [Languages]
 Name: "english"; MessagesFile: "compiler:Default.isl"
 
+[Dirs]
+Name: "{app}\bin"
+; create empty lib directory. this can be used for version-specific packages.
+Name: "{app}\lib"
+
 [Files]
 Source: "..\src\OpenSees3.3.0-x64.exe\bin\*"; DestDir: "{app}\bin"; Flags: ignoreversion recursesubdirs
-Source: "..\COPYRIGHT"; DestDir: "{app}"; Flags: ignoreversion recursesubdirs
+Source: "..\COPYRIGHT.txt"; DestDir: "{app}"; Flags: ignoreversion recursesubdirs
 
-; This run command creates a folder junction to the full Tcl library
 [Run]
-Filename: "{cmd}"; Parameters: "/C mklink /J ""{app}\lib"" ""{code:GetActiveTclPath}\lib"""
+Filename: "{cmd}"; Parameters: "/C start """" ""{app}""" 
+
+; on uninstall, delete the batch file created in code section, and folders if empty.
+[UninstallDelete]
+Type: files; Name: "{app}\OpenSees.bat"
+Type: dirifempty; Name: "{app}\bin"
+Type: dirifempty; Name: "{app}\lib"
+Type: dirifempty; Name: "{app}"
 
 [Tasks]
 Name: envPath; Description: "Add to PATH variable" 
-
-; This deletes the folder junction to the full Tcl library
-[UninstallDelete]
-Type: filesandordirs; Name: "{app}\lib"
 
 [Code]
 // This code checks to see if the correct version of Tcl is installed (ActiveTcl), and gets the location
@@ -69,8 +76,16 @@ begin
     // only compare patch level (don't worry about build number)
     if (MajorVersion = 8) and (MinorVersion = 6) and (RevisionNumber = 10) then
     begin
-      Result := True;
-      RegQueryStringValue(HKLM,ActiveTclKey + '\' + ActiveTclVersion,'',ActiveTclPath);
+      // try to get Tcl path. If failed, exit.
+      if RegQueryStringValue(HKLM,ActiveTclKey + '\' + ActiveTclVersion,'',ActiveTclPath) then
+      begin
+        Result := True;
+      end
+      else
+      begin
+        Result := False;
+        MsgBox('Failed to get Tcl path from registry', mbError, MB_OK);
+      end;
     end
     else
     begin
@@ -90,18 +105,22 @@ begin
   Result:= ActiveTclPath;
 end;
 
-// code below by Wojciech Mleczek, adds and removes from path.
+// Code for adding/removing from path by Wojciech Mleczek
 // https://stackoverflow.com/a/46609047
 procedure CurStepChanged(CurStep: TSetupStep);
 begin
-    if (CurStep = ssPostInstall) and WizardIsTaskSelected('envPath')
-    then EnvAddPath(ExpandConstant('{app}') +'\bin');
+    if (CurStep = ssPostInstall) then 
+    begin
+      // Create batch file for easy access to executable.
+      SaveStringToFile(ExpandConstant('{app}\OpenSees.bat'),ExpandConstant('{app}\bin\OpenSees.exe'),false);
+      if WizardIsTaskSelected('envPath') then EnvAddPath(ExpandConstant('{app}\bin')); 
+    end
 end;
 
 procedure CurUninstallStepChanged(CurUninstallStep: TUninstallStep);
 begin
-    if CurUninstallStep = usPostUninstall
-    then EnvRemovePath(ExpandConstant('{app}') +'\bin');
+    if CurUninstallStep = usPostUninstall then EnvRemovePath(ExpandConstant('{app}\bin'));
 end;
+
 
 
