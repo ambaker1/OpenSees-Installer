@@ -18,6 +18,7 @@ VersionInfoVersion={#MyAppVersion}.0
 DefaultDirName={code:GetTclPath}\{#MyAppName}-{#MyAppVersion}
 DisableWelcomePage=no
 DisableDirPage=yes
+UsePreviousAppDir=no
 DefaultGroupName={#MyAppName}
 DisableProgramGroupPage=yes
 OutputBaseFilename={#MyAppName}-{#MyAppVersion}-Setup
@@ -63,20 +64,21 @@ var
 
 function InitializeSetup(): Boolean;
 var
+  // Version string to compare against required.
+  TclVersion: AnsiString;
   // Variables for getting version from registry
   ActiveTclVersionArray: TArrayOfString;
+  i: Integer;
   ActiveTclVersion: String;
   PackedVersion: Int64;
   MajorVersion: Word;
   MinorVersion: Word;
   RevisionNumber: Word;
   BuildNumber: Word;
-  TclVersion: AnsiString;
   // Variables for getting version from tclsh.exe 
   TmpInFile: String;
   TmpOutFile: String;
   ExitCode: Integer;
-  i: Integer;
 begin
   // initialize result
   Result := False;
